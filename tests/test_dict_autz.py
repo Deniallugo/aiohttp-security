@@ -4,7 +4,7 @@ from aiohttp import web
 from aiohttp_security import setup as _setup
 from aiohttp_security import (AbstractAuthorizationPolicy, authorized_userid,
                               forget, has_permission, is_anonymous,
-                              login_required, permits, remember)
+                              login_required, permits, remember, provide_user)
 from aiohttp_security.cookies_identity import CookiesIdentityPolicy
 
 
@@ -34,6 +34,30 @@ async def test_authorized_userid(loop, test_client):
         userid = await authorized_userid(request)
         assert 'Andrew' == userid
         return web.Response(text=userid)
+
+    app = web.Application(loop=loop)
+    _setup(app, CookiesIdentityPolicy(), Autz())
+    app.router.add_route('GET', '/', check)
+    app.router.add_route('POST', '/login', login)
+    client = await test_client(app)
+
+    resp = await client.post('/login')
+    assert 200 == resp.status
+    txt = await resp.text()
+    assert 'Andrew' == txt
+
+
+async def test_provide_user(loop, test_client):
+
+    async def login(request):
+        response = web.HTTPFound(location='/')
+        await remember(request, response, 'UserID')
+        return response
+
+    @provide_user
+    async def check(request, user):
+        assert 'Andrew' == user
+        return web.Response(text=user)
 
     app = web.Application(loop=loop)
     _setup(app, CookiesIdentityPolicy(), Autz())
@@ -163,7 +187,7 @@ async def test_is_anonymous(loop, test_client):
 
 async def test_login_required(loop, test_client):
     @login_required
-    async def index(request):
+    async def index(request, user):
         return web.HTTPOk()
 
     async def login(request):
@@ -197,15 +221,15 @@ async def test_login_required(loop, test_client):
 async def test_has_permission(loop, test_client):
 
     @has_permission('read')
-    async def index_read(request):
+    async def index_read(request, user):
         return web.HTTPOk()
 
     @has_permission('write')
-    async def index_write(request):
+    async def index_write(request, user):
         return web.HTTPOk()
 
     @has_permission('forbid')
-    async def index_forbid(request):
+    async def index_forbid(request, user):
         return web.HTTPOk()
 
     async def login(request):

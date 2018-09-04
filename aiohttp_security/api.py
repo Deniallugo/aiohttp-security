@@ -91,6 +91,9 @@ def login_required(fn):
 
     User is considered authorized if authorized_userid
     returns some value.
+
+    Decorator add extra argument "user"
+
     """
     @wraps(fn)
     async def wrapped(*args, **kwargs):
@@ -105,7 +108,28 @@ def login_required(fn):
         if userid is None:
             raise web.HTTPUnauthorized
 
-        ret = await fn(*args, **kwargs)
+        ret = await fn(*args, **kwargs, user=userid)
+        return ret
+
+    return wrapped
+
+
+def provide_user(fn):
+    """Decorator that add user to function with request
+
+        Decorator add extra argument "user"
+    """
+    @wraps(fn)
+    async def wrapped(*args, **kwargs):
+        request = args[-1]
+        if not isinstance(request, web.BaseRequest):
+            msg = ("Incorrect decorator usage. "
+                   "Expecting `def handler(request)` "
+                   "or `def handler(self, request)`.")
+            raise RuntimeError(msg)
+
+        userid = await authorized_userid(request)
+        ret = await fn(*args, **kwargs, user=userid)
         return ret
 
     return wrapped
@@ -121,6 +145,8 @@ def has_permission(
     If user is not authorized - raises HTTPUnauthorized,
     if user is authorized and does not have permission -
     raises HTTPForbidden.
+
+    Decorator add extra argument "user"
     """
     def wrapper(fn):
         @wraps(fn)
@@ -139,7 +165,7 @@ def has_permission(
             allowed = await permits(request, permission, context)
             if not allowed:
                 raise web.HTTPForbidden
-            ret = await fn(*args, **kwargs)
+            ret = await fn(*args, **kwargs, user=userid)
             return ret
 
         return wrapped
