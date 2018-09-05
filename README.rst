@@ -53,3 +53,11 @@ License
 -------
 
 ``aiohttp_security`` is offered under the Apache 2 license.
+
+Changes
+-------
+Now decorators
+
+ `login_required`,  `provide_user`, `has_permission` 
+
+add user argument to function
