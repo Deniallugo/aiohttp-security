@@ -1,11 +1,13 @@
 import enum
 from aiohttp import web
 from aiohttp_security.abc import (AbstractIdentityPolicy,
-                                  AbstractAuthorizationPolicy)
+                                  AbstractAuthorizationPolicy,
+                                  AbstractAuthenticationPolicy)
 from functools import wraps
 
 IDENTITY_KEY = 'aiohttp_security_identity_policy'
 AUTZ_KEY = 'aiohttp_security_autz_policy'
+AUTH_KEY = 'aiohttp_security_auth_policy'
 
 
 async def remember(request, response, identity, **kwargs):
@@ -58,6 +60,17 @@ async def authorized_userid(request):
     return user_id
 
 
+async def authenticate_user(credentials, context):
+    app = context.get('app')
+    if app is None:
+        raise Exception('No app in context')
+    authenticate_policy = app.get(AUTH_KEY)
+    if authenticate_policy is None:
+        return None
+    user = await authenticate_policy.authentificate_user(credentials, context)
+    return user
+
+
 async def permits(request, permission, context=None):
     assert isinstance(permission, (str, enum.Enum)), permission
     assert permission
@@ -95,6 +108,7 @@ def login_required(fn):
     Decorator add extra argument "user"
 
     """
+
     @wraps(fn)
     async def wrapped(*args, **kwargs):
         request = args[-1]
@@ -119,6 +133,7 @@ def provide_user(fn):
 
         Decorator add extra argument "user"
     """
+
     @wraps(fn)
     async def wrapped(*args, **kwargs):
         request = args[-1]
@@ -136,8 +151,8 @@ def provide_user(fn):
 
 
 def has_permission(
-    permission,
-    context=None,
+        permission,
+        context=None,
 ):
     """Decorator that restrict access only for authorized users
     with correct permissions.
@@ -148,6 +163,7 @@ def has_permission(
 
     Decorator add extra argument "user"
     """
+
     def wrapper(fn):
         @wraps(fn)
         async def wrapped(*args, **kwargs):
@@ -173,9 +189,14 @@ def has_permission(
     return wrapper
 
 
-def setup(app, identity_policy, autz_policy):
+def setup(app, identity_policy, autz_policy, auth_policy=None):
     assert isinstance(identity_policy, AbstractIdentityPolicy), identity_policy
     assert isinstance(autz_policy, AbstractAuthorizationPolicy), autz_policy
+
+    if auth_policy:
+        assert isinstance(auth_policy,
+                          AbstractAuthenticationPolicy), auth_policy
+        app[AUTH_KEY] = auth_policy
 
     app[IDENTITY_KEY] = identity_policy
     app[AUTZ_KEY] = autz_policy
