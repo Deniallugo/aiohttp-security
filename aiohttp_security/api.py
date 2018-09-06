@@ -65,7 +65,8 @@ async def authenticate_user(credentials, context):
     """Authenticate user by credentials
 
     :param credentials: Authenticate credentials for AuthenticationPolicy
-    :param context: context can be dict or object, you can send request like context
+    :param context: context can be dict or object,
+     you can send request like context
     :return: User
     """
     app = context.get('app') or getattr(context, 'app', None)

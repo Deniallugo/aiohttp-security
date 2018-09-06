@@ -54,7 +54,7 @@ class AbstractAuthorizationPolicy(metaclass=abc.ABCMeta):
 class AbstractAuthenticationPolicy(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
-    async def authenticate_user(self, context, credentials):
+    async def authenticate_user(self, credentials, context):
         """Retrieve authorized user.
 
         Return the user by the user authentication credentials
