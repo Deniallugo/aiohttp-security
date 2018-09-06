@@ -1,4 +1,5 @@
 import enum
+import warnings
 from aiohttp import web
 from aiohttp_security.abc import (AbstractIdentityPolicy,
                                   AbstractAuthorizationPolicy,
@@ -61,13 +62,19 @@ async def authorized_userid(request):
 
 
 async def authenticate_user(credentials, context):
-    app = context.get('app')
+    """Authenticate user by credentials
+
+    :param credentials: Authenticate credentials for AuthenticationPolicy
+    :param context: context can be dict or object, you can send request like context
+    :return: User
+    """
+    app = context.get('app') or getattr(context, 'app', None)
     if app is None:
         raise Exception('No app in context')
     authenticate_policy = app.get(AUTH_KEY)
     if authenticate_policy is None:
         return None
-    user = await authenticate_policy.authentificate_user(credentials, context)
+    user = await authenticate_policy.authenticate_user(credentials, context)
     return user
 
 
@@ -99,6 +106,15 @@ async def is_anonymous(request):
     return False
 
 
+async def check_authorized(request):
+    """Checker that raises HTTPUnauthorized for anonymous users.
+    """
+    userid = await authorized_userid(request)
+    if userid is None:
+        raise web.HTTPUnauthorized()
+    return userid
+
+
 def login_required(fn):
     """Decorator that restrict access only for authorized users.
 
@@ -118,43 +134,34 @@ def login_required(fn):
                    "or `def handler(self, request)`.")
             raise RuntimeError(msg)
 
-        userid = await authorized_userid(request)
-        if userid is None:
-            raise web.HTTPUnauthorized
+        await check_authorized(request)
+        return await fn(*args, **kwargs)
 
-        ret = await fn(*args, **kwargs, user=userid)
-        return ret
-
+    warnings.warn("login_required decorator is deprecated, "
+                  "use check_authorized instead",
+                  DeprecationWarning)
     return wrapped
 
 
-def provide_user(fn):
-    """Decorator that add user to function with request
+async def check_permission(request, permission, context=None):
+    """Checker that passes only to authoraised users with given permission.
 
-        Decorator add extra argument "user"
+    If user is not authorized - raises HTTPUnauthorized,
+    if user is authorized and does not have permission -
+    raises HTTPForbidden.
     """
 
-    @wraps(fn)
-    async def wrapped(*args, **kwargs):
-        request = args[-1]
-        if not isinstance(request, web.BaseRequest):
-            msg = ("Incorrect decorator usage. "
-                   "Expecting `def handler(request)` "
-                   "or `def handler(self, request)`.")
-            raise RuntimeError(msg)
-
-        userid = await authorized_userid(request)
-        ret = await fn(*args, **kwargs, user=userid)
-        return ret
-
-    return wrapped
+    await check_authorized(request)
+    allowed = await permits(request, permission, context)
+    if not allowed:
+        raise web.HTTPForbidden()
 
 
 def has_permission(
         permission,
         context=None,
 ):
-    """Decorator that restrict access only for authorized users
+    """Decorator that restricts access only for authorized users
     with correct permissions.
 
     If user is not authorized - raises HTTPUnauthorized,
@@ -174,18 +181,14 @@ def has_permission(
                        "or `def handler(self, request)`.")
                 raise RuntimeError(msg)
 
-            userid = await authorized_userid(request)
-            if userid is None:
-                raise web.HTTPUnauthorized
-
-            allowed = await permits(request, permission, context)
-            if not allowed:
-                raise web.HTTPForbidden
-            ret = await fn(*args, **kwargs, user=userid)
-            return ret
+            await check_permission(request, permission, context)
+            return await fn(*args, **kwargs)
 
         return wrapped
 
+    warnings.warn("has_permission decorator is deprecated, "
+                  "use check_permission instead",
+                  DeprecationWarning)
     return wrapper
 
 

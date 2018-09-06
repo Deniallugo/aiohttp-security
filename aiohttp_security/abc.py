@@ -1,5 +1,6 @@
 import abc
 
+
 # see http://plope.com/pyramid_auth_design_api_postmortem
 
 
@@ -46,5 +47,17 @@ class AbstractAuthorizationPolicy(metaclass=abc.ABCMeta):
 
         Return the user_id of the user identified by the identity
         or 'None' if no user exists related to the identity.
+        """
+        pass
+
+
+class AbstractAuthenticationPolicy(metaclass=abc.ABCMeta):
+
+    @abc.abstractmethod
+    async def authenticate_user(self, context, credentials):
+        """Retrieve authorized user.
+
+        Return the user by the user authentication credentials
+        or 'None' if no user exists related to provided credentials.
         """
         pass

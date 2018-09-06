@@ -56,3 +56,8 @@ docs/_build/
 target/
 
 coverage
+.pytest_cache
+
+#IDE stuff
+.idea/*
+.vscode/*

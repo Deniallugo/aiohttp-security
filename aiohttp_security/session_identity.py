@@ -6,6 +6,7 @@ to configure aiohttp_session properly.
 
 try:
     from aiohttp_session import get_session
+
     HAS_AIOHTTP_SESSION = True
 except ImportError:  # pragma: no cover
     HAS_AIOHTTP_SESSION = False

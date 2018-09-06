@@ -8,7 +8,7 @@ from aiohttp_security.cookies_identity import CookiesIdentityPolicy
 
 class Auth(AbstractAuthenticationPolicy):
 
-    async def authentificate_user(self, credentials, context=None):
+    async def authenticate_user(self, credentials, context=None):
 
         username = credentials.get('username')
         password = credentials.get('password')
@@ -33,17 +33,35 @@ class Autz(AbstractAuthorizationPolicy):
             return None
 
 
-async def test_authenticate_user(loop, test_client):
+async def test_authenticate_user(loop, aiohttp_client):
     async def login(request):
         context = {'app': request.app}
         credentials = await request.json()
         user = await authenticate_user(credentials, context)
         return web.Response(text=user)
 
-    app = web.Application(loop=loop)
+    app = web.Application()
     _setup(app, CookiesIdentityPolicy(), Autz(), Auth())
     app.router.add_route('POST', '/login', login)
-    client = await test_client(app)
+    client = await aiohttp_client(app)
+
+    resp = await client.post('/login',
+                             json={'username': 'UserID', 'password': 'pass'})
+    assert 200 == resp.status
+    txt = await resp.text()
+    assert 'Andrew' == txt
+
+
+async def test_authenticate_user_by_request(loop, aiohttp_client):
+    async def login(request):
+        credentials = await request.json()
+        user = await authenticate_user(credentials, request)
+        return web.Response(text=user)
+
+    app = web.Application()
+    _setup(app, CookiesIdentityPolicy(), Autz(), Auth())
+    app.router.add_route('POST', '/login', login)
+    client = await aiohttp_client(app)
 
     resp = await client.post('/login',
                              json={'username': 'UserID', 'password': 'pass'})
