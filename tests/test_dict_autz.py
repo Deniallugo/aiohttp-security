@@ -18,7 +18,7 @@ class Autz(AbstractAuthorizationPolicy):
         else:
             return False
 
-    async def authorized_userid(self, identity):
+    async def authorized_userid(self, identity, context=None):
         if identity == 'UserID':
             return 'Andrew'
         else:

@@ -25,7 +25,7 @@ class Autz(AbstractAuthorizationPolicy):
     async def permits(self, identity, permission, context=None):
         pass
 
-    async def authorized_userid(self, identity):
+    async def authorized_userid(self, identity, context=None):
         pass
 
 

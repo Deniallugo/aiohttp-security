@@ -49,15 +49,15 @@ async def forget(request, response):
     await identity_policy.forget(request, response)
 
 
-async def authorized_userid(request):
+async def authorized_userid(request, context=None):
     identity_policy = request.app.get(IDENTITY_KEY)
     autz_policy = request.app.get(AUTZ_KEY)
     if identity_policy is None or autz_policy is None:
         return None
-    identity = await identity_policy.identify(request)
+    identity = await identity_policy.identify(request, context)
     if identity is None:
         return None  # non-registered user has None user_id
-    user_id = await autz_policy.authorized_userid(identity)
+    user_id = await autz_policy.authorized_userid(identity, context)
     return user_id
 
 
@@ -92,7 +92,7 @@ async def permits(request, permission, context=None):
     return access
 
 
-async def is_anonymous(request):
+async def is_anonymous(request, context=None):
     """Check if user is anonymous.
 
     User is considered anonymous if there is not identity
@@ -101,16 +101,16 @@ async def is_anonymous(request):
     identity_policy = request.app.get(IDENTITY_KEY)
     if identity_policy is None:
         return True
-    identity = await identity_policy.identify(request)
+    identity = await identity_policy.identify(request, context)
     if identity is None:
         return True
     return False
 
 
-async def check_authorized(request):
+async def check_authorized(request, context=None):
     """Checker that raises HTTPUnauthorized for anonymous users.
     """
-    userid = await authorized_userid(request)
+    userid = await authorized_userid(request, context)
     if userid is None:
         raise web.HTTPUnauthorized()
     return userid
@@ -152,7 +152,7 @@ async def check_permission(request, permission, context=None):
     raises HTTPForbidden.
     """
 
-    await check_authorized(request)
+    await check_authorized(request, context)
     allowed = await permits(request, permission, context)
     if not allowed:
         raise web.HTTPForbidden()

@@ -21,7 +21,7 @@ class JWTIdentityPolicy(AbstractIdentityPolicy):
         self.secret = secret
         self.algorithm = algorithm
 
-    async def identify(self, request):
+    async def identify(self, request, context=None):
         header_identity = request.headers.get(AUTH_HEADER_NAME)
 
         if header_identity is None:
