@@ -17,7 +17,7 @@ class CookiesIdentityPolicy(AbstractIdentityPolicy):
         self._cookie_name = 'AIOHTTP_SECURITY'
         self._max_age = 30 * 24 * 3600
 
-    async def identify(self, request):
+    async def identify(self, request, context=None):
         identity = request.cookies.get(self._cookie_name)
         return identity
 

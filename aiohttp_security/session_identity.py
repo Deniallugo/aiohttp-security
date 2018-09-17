@@ -23,7 +23,7 @@ class SessionIdentityPolicy(AbstractIdentityPolicy):
             raise ImportError(
                 'SessionIdentityPolicy requires `aiohttp_session`')
 
-    async def identify(self, request):
+    async def identify(self, request, context=None):
         session = await get_session(request)
         return session.get(self._session_key)
 

@@ -7,7 +7,7 @@ import abc
 class AbstractIdentityPolicy(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
-    async def identify(self, request):
+    async def identify(self, request, context=None):
         """Return the claimed identity of the user associated request or
         ``None`` if no identity can be found associated with the request."""
         pass
@@ -42,7 +42,7 @@ class AbstractAuthorizationPolicy(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    async def authorized_userid(self, identity):
+    async def authorized_userid(self, identity, context=None):
         """Retrieve authorized user id.
 
         Return the user_id of the user identified by the identity
